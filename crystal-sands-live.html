@@ -343,7 +343,7 @@ canvas{max-width:100%;}
 // CONFIG — Crystal Sands
 // ============================================================
 // Power Automate exports fresh JSON daily — publicly accessible
-const DATA_URL = 'https://cpgsl.sharepoint.com/sites/CPG-Reservations/_layouts/15/download.aspx?SourceUrl=/sites/CPG-Reservations/Databases/dashboard-data.json&e=wNwYYd';
+const DATA_URL = 'https://cpgsl.sharepoint.com/:u:/s/CPG-Reservations/IQDT_rgZhNJhQY9wCnkTaFwVAYrS56wsVRwkkbSl5hQychI?e=wNwYYd&download=1';
 const SHEET_NAME   = 'All Bookings';
 const BUDGET_SHEET = 'Budgets';
 const FY_MONTHS = ['Apr-25','May-25','Jun-25','Jul-25','Aug-25','Sep-25','Oct-25','Nov-25','Dec-25','Jan-26','Feb-26','Mar-26'];
@@ -404,7 +404,11 @@ async function loadDashboard() {
     setLoadingText('Fetching live data...');
 
     // Fetch the JSON file exported daily by Power Automate
-    const res = await fetch(DATA_URL, { mode: 'cors' });
+    // Public SharePoint file — no credentials needed
+    const res = await fetch(DATA_URL, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
     if (!res.ok) throw new Error(`Could not load data: HTTP ${res.status}`);
     const data = await res.json();
 
