@@ -253,8 +253,8 @@ function processProperty(data, prop) {
 
   // Find column indices — try multiple possible names
   const findCol = (...names) => { for (const n of names) { const i = headers.indexOf(n); if (i>=0) return i; } return -1; };
-  const rcIdx  = findCol('Room Charges','Room Revenue','Revenue');
-  const rnIdx  = findCol('Room Nights','Villa Nights','Nights');
+  const rcIdx  = findCol('Room Charges','Room Revenue','Revenue','Room Charges ');
+  const rnIdx  = findCol('Room Nights','Villa Nights','Nights','VN','Room Nights ');
   const arrIdx = findCol('Arrival');
   const resIdx = findCol('Reservation No.','Res No','Reservation No');
   const fyIdx  = findCol('Financial Year');
@@ -315,8 +315,9 @@ async function loadProperty(prop) {
     badge.className = 'prop-badge live';
 
   } catch(e) {
-    console.error(`Failed to load ${prop.name}:`, e);
-    document.getElementById(`${prop.id}-rev`).textContent = 'Unavailable';
+    console.error(`Failed to load ${prop.name}:`, e.message || e);
+    document.getElementById(`${prop.id}-rev`).textContent = 'Error';
+    document.getElementById(`${prop.id}-vn`).textContent = e.message ? e.message.slice(0,20) : '—';
     const badge = document.getElementById(`badge-${prop.id}`);
     badge.textContent = 'Error';
     badge.className = 'prop-badge error';
