@@ -436,10 +436,10 @@ async function loadDashboard() {
 
     const bdHeaders = budgetRows2D[0] ? budgetRows2D[0].map(h => String(h || '').trim()) : [];
     const budgetRows = budgetRows2D.slice(1)
-      .filter(row => row && Array.isArray(row))
+      .filter(row => row && Array.isArray(row) && row.some(c => c !== null && c !== ''))
       .map(row => {
         const obj = {};
-        bdHeaders.forEach((h, i) => obj[h] = row[i] !== undefined ? row[i] : null);
+        bdHeaders.forEach((h, i) => obj[h] = (row[i] !== undefined && row[i] !== null) ? row[i] : null);
         return obj;
       });
 
