@@ -6,7 +6,6 @@
 <title>Crystal Sands — Live Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg:#0b0f1a; --surface:#111827; --border:rgba(255,255,255,0.07);
@@ -343,9 +342,8 @@ canvas{max-width:100%;}
 // ============================================================
 // CONFIG — Crystal Sands
 // ============================================================
-const SP_SITE   = 'https://cpgsl.sharepoint.com/sites/CPG-Reservations';
-const SP_LIB    = 'Databases';
-const CS_FILE   = 'Crystal Sands Database.xlsx';
+// Power Automate exports fresh JSON daily — publicly accessible
+const DATA_URL = 'https://cpgsl.sharepoint.com/sites/CPG-Reservations/_layouts/15/download.aspx?SourceUrl=/sites/CPG-Reservations/Databases/dashboard-data.json&e=wNwYYd';
 const SHEET_NAME   = 'All Bookings';
 const BUDGET_SHEET = 'Budgets';
 const FY_MONTHS = ['Apr-25','May-25','Jun-25','Jul-25','Aug-25','Sep-25','Oct-25','Nov-25','Dec-25','Jan-26','Feb-26','Mar-26'];
@@ -353,34 +351,14 @@ const FY_LABEL  = '2025-2026';
 const TOTAL_VILLAS = 24;
 
 // ============================================================
-// SHAREPOINT REST — no login needed, uses browser session
+// DATA — fetches live JSON exported daily by Power Automate
+// No login required — file is publicly shared
 // ============================================================
 let charts = {};
 
 async function initAuth() {
-  showLoading('Connecting to SharePoint...');
+  showLoading('Loading live data...');
   await loadDashboard();
-}
-
-async function fetchSheetData(fileName, sheetName) {
-  // SharePoint REST API — uses existing browser session cookie, no login required
-  // Must be opened from within cpgsl.sharepoint.com for cookies to be sent
-  const fileUrl = `${SP_SITE}/_api/web/GetFolderByServerRelativeUrl('${SP_LIB}')/Files('${encodeURIComponent(fileName)}')/\$value`;
-  const res = await fetch(fileUrl, {
-    credentials: 'include',
-    headers: { 'Accept': 'application/octet-stream' }
-  });
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
-      throw new Error('Not authorised — please open this dashboard from your SharePoint site while logged in.');
-    }
-    throw new Error(`Could not fetch ${fileName}: HTTP ${res.status}`);
-  }
-  const arrayBuffer = await res.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
-  const ws = workbook.Sheets[sheetName];
-  if (!ws) throw new Error(`Sheet "${sheetName}" not found in ${fileName}`);
-  return XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 }
 
 function rangeToObjects(rangeData) {
@@ -423,38 +401,50 @@ function getFinancialYear(date) {
 // ============================================================
 async function loadDashboard() {
   try {
-    setLoadingText('Reading bookings data...');
-    const bookingRows = await fetchSheetData(CS_FILE, SHEET_NAME);
-    const headers = bookingRows[0].map(h => String(h || '').trim());
-    const bookings = bookingRows.slice(1).map(row => {
+    setLoadingText('Fetching live data...');
+
+    // Fetch the JSON file exported daily by Power Automate
+    const res = await fetch(DATA_URL, { mode: 'cors' });
+    if (!res.ok) throw new Error(`Could not load data: HTTP ${res.status}`);
+    const data = await res.json();
+
+    // Extract Crystal Sands data from the combined JSON
+    const csData = typeof data.crystalSands === 'string' ? JSON.parse(data.crystalSands) : data.crystalSands;
+
+    // csData.bookings and csData.budgets are 2D arrays from the Office Script
+    const bookingRows2D = csData.bookings || [];
+    const budgetRows2D  = csData.budgets  || [];
+
+    if (bookingRows2D.length < 2) throw new Error('No booking data found in JSON');
+
+    const bkHeaders = bookingRows2D[0].map(h => String(h || '').trim());
+    const bookings = bookingRows2D.slice(1).map(row => {
       const obj = {};
-      headers.forEach((h, i) => obj[h] = row[i]);
+      bkHeaders.forEach((h, i) => obj[h] = row[i]);
       return obj;
     });
 
-    setLoadingText('Reading budget data...');
-    const budgetRows2 = await fetchSheetData(CS_FILE, BUDGET_SHEET);
-    const bHeaders = budgetRows2[0].map(h => String(h || '').trim());
-    const budgetRows = budgetRows2.slice(1).map(row => {
+    const bdHeaders = budgetRows2D[0] ? budgetRows2D[0].map(h => String(h || '').trim()) : [];
+    const budgetRows = budgetRows2D.slice(1).map(row => {
       const obj = {};
-      bHeaders.forEach((h, i) => obj[h] = row[i]);
+      bdHeaders.forEach((h, i) => obj[h] = row[i]);
       return obj;
     });
 
     setLoadingText('Processing data...');
     processAndRender(bookings, budgetRows);
 
+    const exported = data.exported ? new Date(data.exported).toLocaleString() : new Date().toLocaleString();
     document.getElementById('userInfo').textContent = '';
-    document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    document.getElementById('lastUpdated').textContent = `Data as of ${exported}`;
     showApp();
   } catch(e) {
     console.error('Dashboard load error:', e);
-    setLoadingText(`${e.message}`);
-    // Fallback to static data
+    setLoadingText(`Live data unavailable — showing last cached data. (${e.message})`);
     setTimeout(() => {
       renderWithStaticData();
       showApp();
-    }, 2000);
+    }, 2500);
   }
 }
 
