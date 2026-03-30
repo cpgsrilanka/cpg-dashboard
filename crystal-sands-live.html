@@ -343,7 +343,7 @@ canvas{max-width:100%;}
 // CONFIG — Crystal Sands
 // ============================================================
 // Power Automate exports fresh JSON daily — publicly accessible
-const DATA_URL = 'https://cpgsl.sharepoint.com/:u:/s/CPG-Reservations/IQDT_rgZhNJhQY9wCnkTaFwVAYrS56wsVRwkkbSl5hQychI?e=wNwYYd&download=1';
+const DATA_URL = 'https://raw.githubusercontent.com/cpgsrilanka/cpg-dashboard/main/crystal-sands-data.json';
 const SHEET_NAME   = 'All Bookings';
 const BUDGET_SHEET = 'Budgets';
 const FY_MONTHS = ['Apr-25','May-25','Jun-25','Jul-25','Aug-25','Sep-25','Oct-25','Nov-25','Dec-25','Jan-26','Feb-26','Mar-26'];
@@ -412,12 +412,9 @@ async function loadDashboard() {
     if (!res.ok) throw new Error(`Could not load data: HTTP ${res.status}`);
     const data = await res.json();
 
-    // Extract Crystal Sands data from the combined JSON
-    const csData = typeof data.crystalSands === 'string' ? JSON.parse(data.crystalSands) : data.crystalSands;
-
-    // csData.bookings and csData.budgets are 2D arrays from the Office Script
-    const bookingRows2D = csData.bookings || [];
-    const budgetRows2D  = csData.budgets  || [];
+    // crystal-sands-data.json contains {bookings, budgets, exported} directly
+    const bookingRows2D = data.bookings || [];
+    const budgetRows2D  = data.budgets  || [];
 
     if (bookingRows2D.length < 2) throw new Error('No booking data found in JSON');
 
