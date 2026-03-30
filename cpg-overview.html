@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPG Group — Overview Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0b0f1a;--surface:#111827;--border:rgba(255,255,255,0.07);
+  --gold:#c9a84c;--gold-light:#e8c97a;--text:#f0ede6;--muted:#8a9bb5;
+  --up:#4caf8a;--down:#e05555;
+  --cs:#c9a84c;--as:#2a9d8f;--ts:#e76f51;--sh:#457b9d;--lb:#6a4c93;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 15% 15%,rgba(30,58,95,0.3) 0%,transparent 55%),radial-gradient(ellipse at 85% 85%,rgba(201,168,76,0.08) 0%,transparent 55%);pointer-events:none;z-index:0;}
+.wrapper{position:relative;z-index:1;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--border);background:rgba(11,15,26,0.88);backdrop-filter:blur(14px);position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-mark{width:38px;height:38px;background:linear-gradient(135deg,var(--gold),var(--gold-light));border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:15px;color:#0b0f1a;font-weight:600;}
+.logo-text{font-family:'Playfair Display',serif;font-size:18px;letter-spacing:0.02em;}
+.logo-sub{font-size:11px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:16px;}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--up);letter-spacing:0.1em;text-transform:uppercase;}
+.live-dot{width:7px;height:7px;background:var(--up);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+.last-updated{font-size:11px;color:var(--muted);}
+.refresh-btn{background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);color:var(--gold);font-size:11px;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+.refresh-btn:hover{background:rgba(201,168,76,0.2);}
+
+/* LOADING */
+#loadingScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:16px;}
+.spinner{width:40px;height:40px;border:3px solid rgba(201,168,76,0.2);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--muted);}
+
+#app{display:none;}
+
+main{padding:26px 32px;}
+
+/* GROUP KPIs */
+.group-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;animation:fadeUp 0.4s ease both;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);opacity:0.5;}
+.kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;}
+.kpi-value{font-family:'Playfair Display',serif;font-size:26px;color:var(--text);line-height:1;margin-bottom:8px;}
+.kpi-value span{font-size:13px;font-family:'DM Sans',sans-serif;color:var(--muted);}
+.kpi-delta{font-size:11px;color:var(--muted);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* PROPERTY CARDS */
+.properties-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
+.property-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;cursor:pointer;transition:transform 0.2s,border-color 0.2s;text-decoration:none;display:block;}
+.property-card:hover{transform:translateY(-3px);}
+.property-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.property-card.cs::before{background:var(--cs);}
+.property-card.as::before{background:var(--as);}
+.property-card.ts::before{background:var(--ts);}
+.property-card.sh::before{background:var(--sh);}
+.property-card.lb::before{background:var(--lb);}
+.property-card:hover.cs{border-color:rgba(201,168,76,0.4);}
+.property-card:hover.as{border-color:rgba(42,157,143,0.4);}
+.property-card:hover.ts{border-color:rgba(231,111,81,0.4);}
+.property-card:hover.sh{border-color:rgba(69,123,157,0.4);}
+.property-card:hover.lb{border-color:rgba(106,76,147,0.4);}
+.prop-name{font-family:'Playfair Display',serif;font-size:15px;color:var(--text);margin-bottom:14px;}
+.prop-rev{font-family:'Playfair Display',serif;font-size:22px;color:var(--text);margin-bottom:4px;}
+.prop-sub{font-size:11px;color:var(--muted);margin-bottom:12px;}
+.prop-stat{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;}
+.prop-stat span:last-child{color:var(--text);}
+.prop-badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10px;margin-top:8px;}
+.prop-badge.loading{background:rgba(138,155,181,0.1);color:var(--muted);}
+.prop-badge.live{background:rgba(76,175,138,0.15);color:var(--up);}
+.prop-badge.error{background:rgba(224,85,85,0.12);color:var(--down);}
+
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:28px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;}
+.chart-title{font-family:'Playfair Display',serif;font-size:15px;color:var(--text);margin-bottom:3px;}
+.chart-subtitle{font-size:11px;color:var(--muted);margin-bottom:20px;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+.legend-dot{width:10px;height:10px;border-radius:2px;}
+
+canvas{max-width:100%;}
+
+.view-all{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--gold);text-decoration:none;margin-top:8px;}
+
+@media(max-width:1100px){.group-kpis,.properties-grid{grid-template-columns:repeat(3,1fr);}.charts-row{grid-template-columns:1fr;}}
+@media(max-width:600px){.group-kpis,.properties-grid{grid-template-columns:1fr 1fr;}main{padding:16px;}header{padding:14px 16px;}}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">CPG</div>
+    <div>
+      <div class="logo-text">Crystal Property Group</div>
+      <div class="logo-sub">Group Performance Overview</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="last-updated" id="lastUpdated"></div>
+    <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+    <div class="live-badge"><div class="live-dot"></div>Live Data</div>
+  </div>
+</header>
+
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Loading all properties...</div>
+</div>
+
+<div id="app">
+<main>
+
+  <!-- GROUP KPIs -->
+  <div class="group-kpis">
+    <div class="kpi-card">
+      <div class="kpi-label">Group Total Revenue</div>
+      <div class="kpi-value" id="g-rev"><span>LKR </span>—</div>
+      <div class="kpi-delta" id="g-rev-d">All properties · FY 25/26</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Bookings</div>
+      <div class="kpi-value" id="g-bk">—</div>
+      <div class="kpi-delta">All properties combined</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Room Nights</div>
+      <div class="kpi-value" id="g-vn">—</div>
+      <div class="kpi-delta">Across all properties</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Group ADR</div>
+      <div class="kpi-value" id="g-adr"><span>LKR </span>—</div>
+      <div class="kpi-delta">Weighted average</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Properties Live</div>
+      <div class="kpi-value" id="g-props">—<span>/5</span></div>
+      <div class="kpi-delta" id="g-props-d">Data loaded</div>
+    </div>
+  </div>
+
+  <!-- PROPERTY CARDS -->
+  <div class="properties-grid">
+    <a href="crystal-sands-live.html" class="property-card cs" id="card-cs">
+      <div class="prop-name">Crystal Sands</div>
+      <div class="prop-rev" id="cs-rev">—</div>
+      <div class="prop-sub">Total Revenue · FY 25/26</div>
+      <div class="prop-stat"><span>Room Nights</span><span id="cs-vn">—</span></div>
+      <div class="prop-stat"><span>ADR</span><span id="cs-adr">—</span></div>
+      <div class="prop-stat"><span>Bookings</span><span id="cs-bk">—</span></div>
+      <span class="prop-badge loading" id="badge-cs">Loading...</span>
+    </a>
+    <a href="asaya-sands-live.html" class="property-card as" id="card-as">
+      <div class="prop-name">Asaya Sands</div>
+      <div class="prop-rev" id="as-rev">—</div>
+      <div class="prop-sub">Total Revenue · FY 25/26</div>
+      <div class="prop-stat"><span>Room Nights</span><span id="as-vn">—</span></div>
+      <div class="prop-stat"><span>ADR</span><span id="as-adr">—</span></div>
+      <div class="prop-stat"><span>Bookings</span><span id="as-bk">—</span></div>
+      <span class="prop-badge loading" id="badge-as">Loading...</span>
+    </a>
+    <a href="the-six-live.html" class="property-card ts" id="card-ts">
+      <div class="prop-name">The Six</div>
+      <div class="prop-rev" id="ts-rev">—</div>
+      <div class="prop-sub">Total Revenue · FY 25/26</div>
+      <div class="prop-stat"><span>Room Nights</span><span id="ts-vn">—</span></div>
+      <div class="prop-stat"><span>ADR</span><span id="ts-adr">—</span></div>
+      <div class="prop-stat"><span>Bookings</span><span id="ts-bk">—</span></div>
+      <span class="prop-badge loading" id="badge-ts">Loading...</span>
+    </a>
+    <a href="sol-house-live.html" class="property-card sh" id="card-sh">
+      <div class="prop-name">Sol House</div>
+      <div class="prop-rev" id="sh-rev">—</div>
+      <div class="prop-sub">Total Revenue · FY 25/26</div>
+      <div class="prop-stat"><span>Room Nights</span><span id="sh-vn">—</span></div>
+      <div class="prop-stat"><span>ADR</span><span id="sh-adr">—</span></div>
+      <div class="prop-stat"><span>Bookings</span><span id="sh-bk">—</span></div>
+      <span class="prop-badge loading" id="badge-sh">Loading...</span>
+    </a>
+    <a href="leyn-baan-live.html" class="property-card lb" id="card-lb">
+      <div class="prop-name">Leyn Baan</div>
+      <div class="prop-rev" id="lb-rev">—</div>
+      <div class="prop-sub">Total Revenue · FY 25/26</div>
+      <div class="prop-stat"><span>Room Nights</span><span id="lb-vn">—</span></div>
+      <div class="prop-stat"><span>ADR</span><span id="lb-adr">—</span></div>
+      <div class="prop-stat"><span>Bookings</span><span id="lb-bk">—</span></div>
+      <span class="prop-badge loading" id="badge-lb">Loading...</span>
+    </a>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Revenue by Property</div>
+      <div class="chart-subtitle">FY 2025–2026 comparison · LKR</div>
+      <canvas id="propRevenueChart" height="110"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Revenue Share</div>
+      <div class="chart-subtitle">% of group total</div>
+      <canvas id="propShareChart" height="160"></canvas>
+      <div class="legend" id="shareLegend" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+</div>
+
+<script>
+Chart.defaults.color='#8a9bb5';
+Chart.defaults.font.family='DM Sans';
+Chart.defaults.font.size=11;
+const grid={color:'rgba(255,255,255,0.04)',drawBorder:false};
+
+const PROPERTIES = [
+  { id:'cs', name:'Crystal Sands', color:'#c9a84c', url:'https://raw.githubusercontent.com/cpgsrilanka/cpg-dashboard/main/crystal-sands-data.json', fy:'2025-2026', fyStart:4 },
+  { id:'as', name:'Asaya Sands',   color:'#2a9d8f', url:'https://raw.githubusercontent.com/cpgsrilanka/cpg-dashboard/main/asaya-sands-data.json',   fy:'2025-2026', fyStart:7 },
+  { id:'ts', name:'The Six',       color:'#e76f51', url:'https://raw.githubusercontent.com/cpgsrilanka/cpg-dashboard/main/the-six-data.json',         fy:'2025-2026', fyStart:4 },
+  { id:'sh', name:'Sol House',     color:'#457b9d', url:'https://raw.githubusercontent.com/cpgsrilanka/cpg-dashboard/main/sol-house-data.json',       fy:'2025-2026', fyStart:4 },
+  { id:'lb', name:'Leyn Baan',     color:'#6a4c93', url:'https://raw.githubusercontent.com/cpgsrilanka/cpg-dashboard/main/leyn-baan-data.json',       fy:'2025-2026', fyStart:4 },
+];
+
+const fmtM = v => v>=1e6?`LKR ${(v/1e6).toFixed(1)}M`:`LKR ${(v/1000).toFixed(0)}K`;
+const fmtN = v => Number(v).toLocaleString();
+
+function parseDate(val) {
+  if (!val) return null;
+  if (typeof val === 'number') return new Date(Math.round((val-25569)*86400*1000));
+  return new Date(val);
+}
+
+function getFinancialYear(date) {
+  if (!date) return '';
+  const m = date.getMonth()+1, y = date.getFullYear();
+  return m>=4?`${y}-${y+1}`:`${y-1}-${y}`;
+}
+
+function processProperty(data, prop) {
+  const rows = data.bookings || [];
+  if (rows.length < 2) return null;
+  const headers = rows[0].map(h=>String(h||'').trim());
+  const rcIdx = headers.indexOf('Room Charges');
+  const rnIdx = headers.indexOf('Room Nights');
+  const arrIdx = headers.indexOf('Arrival');
+  const resIdx = headers.indexOf('Reservation No.');
+
+  let totalRev=0, totalVN=0, totalBk=new Set();
+
+  for (let i=1; i<rows.length; i++) {
+    const row = rows[i];
+    const rc = parseFloat(row[rcIdx]||0);
+    if (rc<=0) continue;
+    const arr = parseDate(row[arrIdx]);
+    if (!arr) continue;
+    const fy = getFinancialYear(arr);
+    if (fy !== prop.fy) continue;
+    totalRev += rc;
+    totalVN += parseFloat(row[rnIdx]||0);
+    if (row[resIdx]) totalBk.add(row[resIdx]);
+  }
+
+  return {
+    rev: totalRev,
+    vn: totalVN,
+    bk: totalBk.size,
+    adr: totalVN>0?totalRev/totalVN:0
+  };
+}
+
+let results = {};
+let charts = {};
+
+async function loadProperty(prop) {
+  try {
+    const res = await fetch(prop.url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const stats = processProperty(data, prop);
+    if (!stats) throw new Error('No data');
+
+    results[prop.id] = stats;
+
+    // Update card
+    document.getElementById(`${prop.id}-rev`).textContent = fmtM(stats.rev);
+    document.getElementById(`${prop.id}-vn`).textContent = fmtN(Math.round(stats.vn));
+    document.getElementById(`${prop.id}-adr`).textContent = `LKR ${fmtN(Math.round(stats.adr))}`;
+    document.getElementById(`${prop.id}-bk`).textContent = fmtN(stats.bk);
+    const badge = document.getElementById(`badge-${prop.id}`);
+    badge.textContent = 'Live';
+    badge.className = 'prop-badge live';
+
+  } catch(e) {
+    console.error(`Failed to load ${prop.name}:`, e);
+    document.getElementById(`${prop.id}-rev`).textContent = 'Unavailable';
+    const badge = document.getElementById(`badge-${prop.id}`);
+    badge.textContent = 'Error';
+    badge.className = 'prop-badge error';
+  }
+}
+
+async function loadAll() {
+  results = {};
+  document.getElementById('loadingScreen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('loadingText').textContent='Loading all properties...';
+
+  // Load all properties in parallel
+  await Promise.all(PROPERTIES.map(p => loadProperty(p)));
+
+  // Calculate group totals
+  const loaded = PROPERTIES.filter(p => results[p.id]);
+  const groupRev = loaded.reduce((s,p)=>s+results[p.id].rev,0);
+  const groupVN  = loaded.reduce((s,p)=>s+results[p.id].vn,0);
+  const groupBk  = loaded.reduce((s,p)=>s+results[p.id].bk,0);
+  const groupADR = groupVN>0?groupRev/groupVN:0;
+
+  document.getElementById('g-rev').innerHTML = `<span>LKR </span>${(groupRev/1e6).toFixed(1)}M`;
+  document.getElementById('g-bk').textContent = fmtN(groupBk);
+  document.getElementById('g-vn').textContent = fmtN(Math.round(groupVN));
+  document.getElementById('g-adr').innerHTML = `<span>LKR </span>${fmtN(Math.round(groupADR))}`;
+  document.getElementById('g-props').innerHTML = `${loaded.length}<span>/5</span>`;
+  document.getElementById('g-props-d').textContent = `${loaded.length} of 5 loaded`;
+  document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
+  // Build charts
+  const names = PROPERTIES.map(p=>p.name);
+  const revs  = PROPERTIES.map(p=>results[p.id]?+(results[p.id].rev/1e6).toFixed(2):0);
+  const colors= PROPERTIES.map(p=>p.color);
+
+  if (charts['propRevenueChart']) charts['propRevenueChart'].destroy();
+  charts['propRevenueChart'] = new Chart(document.getElementById('propRevenueChart'),{
+    type:'bar',
+    data:{labels:names,datasets:[{data:revs,backgroundColor:colors,borderRadius:5}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid},y:{grid,ticks:{callback:v=>v+'M'}}}}
+  });
+
+  if (charts['propShareChart']) charts['propShareChart'].destroy();
+  charts['propShareChart'] = new Chart(document.getElementById('propShareChart'),{
+    type:'doughnut',
+    data:{labels:names,datasets:[{data:revs,backgroundColor:colors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: LKR ${c.parsed.toFixed(1)}M`}}}}
+  });
+
+  const legend = document.getElementById('shareLegend');
+  legend.innerHTML = PROPERTIES.map((p,i)=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${p.color}"></div>
+      <span>${p.name} (${groupRev>0?(results[p.id]?.rev/groupRev*100).toFixed(0):0}%)</span>
+    </div>`).join('');
+
+  document.getElementById('loadingScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+loadAll();
+</script>
+</body>
+</html>
