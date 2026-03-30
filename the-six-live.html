@@ -486,9 +486,16 @@ function processAndRender(bookingRows, budgetRows) {
     };
   });
 
-  // FY data
-  const fy = clean.filter(r => r.fy === FY_LABEL);
-  const fyPrev = clean.filter(r => r.fy === '2024-2025');
+  // Debug: log unique FY values
+  const uniqueFYs = [...new Set(clean.map(r => r.fy))];
+  console.log('The Six FY values found:', uniqueFYs);
+  console.log('Looking for FY_LABEL:', FY_LABEL);
+  console.log('Total clean rows:', clean.length);
+
+  // FY data - also try matching with slash format
+  const fy = clean.filter(r => r.fy === FY_LABEL || r.fy === FY_LABEL.replace('-','–'));
+  const fyPrev = clean.filter(r => r.fy === '2024-2025' || r.fy === '2024–2025');
+  console.log('FY rows matched:', fy.length);
 
   // Monthly aggregates
   const monthlyMap = {};
