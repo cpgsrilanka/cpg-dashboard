@@ -274,19 +274,22 @@ function processProperty(data, prop) {
 
   for (let i=headerRowIdx+1; i<rows.length; i++) {
     const row = rows[i];
-    if (!row || !row.length) continue;
+    if (!row || !Array.isArray(row) || row.length <= rcIdx) continue;
+    if (row[rcIdx] === null || row[rcIdx] === undefined || row[rcIdx] === '') continue;
     const rc = parseFloat(row[rcIdx]||0);
     if (!rc || rc<=0 || isNaN(rc)) continue;
 
     // Use Financial Year column if available, else parse from date
     let inFY = false;
-    if (fyIdx >= 0 && row[fyIdx]) {
-      inFY = String(row[fyIdx]).trim() === prop.fy;
-    } else {
-      const arr = parseDate(row[arrIdx]);
-      if (!arr) continue;
-      inFY = getFinancialYear(arr) === prop.fy;
-    }
+    try {
+      if (fyIdx >= 0 && row[fyIdx] !== null && row[fyIdx] !== undefined) {
+        inFY = String(row[fyIdx]).trim() === prop.fy;
+      } else if (arrIdx >= 0 && row[arrIdx] !== null) {
+        const arr = parseDate(row[arrIdx]);
+        if (!arr) continue;
+        inFY = getFinancialYear(arr) === prop.fy;
+      }
+    } catch(ex) { continue; }
     if (!inFY) continue;
 
     totalRev += rc;
