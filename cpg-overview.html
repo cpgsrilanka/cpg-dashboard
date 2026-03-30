@@ -249,7 +249,16 @@ function getFinancialYear(date) {
 function processProperty(data, prop) {
   const rows = data.bookings || [];
   if (rows.length < 2) return null;
-  const headers = rows[0].map(h=>String(h||'').trim());
+
+  // Find the actual header row (first row with 'Arrival' or 'Arrival' in it)
+  let headerRowIdx = 0;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    if (rows[i] && rows[i].some(c => String(c||'').trim() === 'Arrival')) {
+      headerRowIdx = i;
+      break;
+    }
+  }
+  const headers = rows[headerRowIdx].map(h=>String(h||'').trim());
 
   // Find column indices — try multiple possible names
   const findCol = (...names) => { for (const n of names) { const i = headers.indexOf(n); if (i>=0) return i; } return -1; };
@@ -263,8 +272,9 @@ function processProperty(data, prop) {
 
   let totalRev=0, totalVN=0, totalBk=new Set();
 
-  for (let i=1; i<rows.length; i++) {
+  for (let i=headerRowIdx+1; i<rows.length; i++) {
     const row = rows[i];
+    if (!row || !row.length) continue;
     const rc = parseFloat(row[rcIdx]||0);
     if (!rc || rc<=0 || isNaN(rc)) continue;
 
