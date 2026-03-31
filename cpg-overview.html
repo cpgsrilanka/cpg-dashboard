@@ -295,6 +295,7 @@ function processProperty(data, prop) {
     if (resIdx >= 0 && row[resIdx]) totalBk.add(String(row[resIdx]));
   }
 
+  console.log(`[${prop.id}] rows=${rows.length} headerAt=${headerRowIdx} rcIdx=${rcIdx} rnIdx=${rnIdx} arrIdx=${arrIdx} totalRev=${totalRev} totalVN=${totalVN} bk=${totalBk.size}`);
   return {
     rev: totalRev,
     vn: Math.round(totalVN),
