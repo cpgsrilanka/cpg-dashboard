@@ -250,14 +250,15 @@ function processProperty(data, prop) {
   const rows = data.bookings || [];
   if (rows.length < 2) return null;
 
-  // Find the actual header row (first row with 'Arrival' or 'Arrival' in it)
-  let headerRowIdx = 0;
+  // Find the actual header row (first non-null row containing 'Arrival')
+  let headerRowIdx = -1;
   for (let i = 0; i < Math.min(rows.length, 10); i++) {
-    if (rows[i] && rows[i].some(c => String(c||'').trim() === 'Arrival')) {
+    if (rows[i] && Array.isArray(rows[i]) && rows[i].some(c => String(c||'').trim() === 'Arrival')) {
       headerRowIdx = i;
       break;
     }
   }
+  if (headerRowIdx < 0) return null; // no header found
   const headers = rows[headerRowIdx].map(h=>String(h||'').trim());
 
   // Find column indices — try multiple possible names
