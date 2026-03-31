@@ -279,12 +279,10 @@ function processProperty(data, prop) {
     const rc = parseFloat(row[rcIdx]||0);
     if (!rc || rc<=0 || isNaN(rc)) continue;
 
-    // Use Financial Year column if available, else parse from date
+    // Calculate FY from arrival date — Financial Year column stores formulas not values
     let inFY = false;
     try {
-      if (fyIdx >= 0 && row[fyIdx] !== null && row[fyIdx] !== undefined) {
-        inFY = String(row[fyIdx]).trim() === prop.fy;
-      } else if (arrIdx >= 0 && row[arrIdx] !== null) {
+      if (arrIdx >= 0 && row[arrIdx] !== null && row[arrIdx] !== undefined) {
         const arr = parseDate(row[arrIdx]);
         if (!arr) continue;
         inFY = getFinancialYear(arr) === prop.fy;
