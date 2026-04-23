@@ -457,8 +457,9 @@ async function refreshData() {
 function processAndRender(bookingRows, budgetRows) {
   // Clean bookings
   const clean = bookingRows.filter(r => {
-    const rc = parseFloat(r['Room Charges'] || r['Room Charges'] || 0);
-    return rc > 0;
+    const rc = parseFloat(r['Room Charges'] || 0);
+    const ps = String(r['Payment Status'] || '').trim();
+    return rc > 0 && (ps === 'Full Payment' || ps === 'Deposit Paid');
   }).map(r => {
     const arrival = parseDate(r['Arrival']);
     const rc = parseFloat(r['Room Charges'] || 0);
